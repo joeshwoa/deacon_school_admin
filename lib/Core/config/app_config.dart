@@ -1,33 +1,12 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 /// Central place to read runtime configuration.
 ///
-/// Values are read from a bundled `.env` file when present. The app is designed
-/// to boot safely even when the `.env` file (or Supabase credentials) is missing
-/// so the UI can still be developed/demoed before the backend is provisioned.
+/// Values are provided at build time via `--dart-define` (or
+/// `--dart-define-from-file=dart_defines.json`). A runtime `.env` is intentionally
+/// not used: web hosts like Vercel do not serve dot-files, so a bundled `.env`
+/// asset would 404 and the credentials would never load.
 abstract class AppConfig {
-  static String _env(String key) {
-    try {
-      if (dotenv.isInitialized) {
-        return dotenv.env[key] ?? '';
-      }
-    } catch (_) {
-      // dotenv not initialized – fall through to compile-time defaults.
-    }
-    return const String.fromEnvironment('placeholder');
-  }
-
-  static String get supabaseUrl {
-    final fromEnv = _env('SUPABASE_URL');
-    if (fromEnv.isNotEmpty) return fromEnv;
-    return const String.fromEnvironment('SUPABASE_URL');
-  }
-
-  static String get supabaseAnonKey {
-    final fromEnv = _env('SUPABASE_ANON_KEY');
-    if (fromEnv.isNotEmpty) return fromEnv;
-    return const String.fromEnvironment('SUPABASE_ANON_KEY');
-  }
+  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
   /// Whether Supabase has been configured with real credentials.
   static bool get hasSupabase =>

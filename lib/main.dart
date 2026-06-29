@@ -1,7 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'Core/cubit/layout_cubit.dart';
 import 'Core/services/custom_bloc_observer.dart';
@@ -22,12 +21,6 @@ import 'Features/Students/presentation/cubit/students_cubit.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
-
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (_) {
-    // No .env bundled yet – the app still boots; backend stays disconnected.
-  }
 
   Bloc.observer = CustomBlocObserver();
   await SharedPreferencesServices.init();
