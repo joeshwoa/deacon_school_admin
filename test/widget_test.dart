@@ -1,30 +1,14 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:deacon_school_admin/Core/services/drive_link.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:deacon_school_admin/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('DriveLink extracts id from a share link', () {
+    const url =
+        'https://drive.google.com/file/d/1A2b3C4d5E6f7G8h9I0jKlMnOpQr/view?usp=sharing';
+    expect(DriveLink.extractId(url), '1A2b3C4d5E6f7G8h9I0jKlMnOpQr');
+    expect(DriveLink.toDirectDownload(url),
+        'https://drive.google.com/uc?export=download&id=1A2b3C4d5E6f7G8h9I0jKlMnOpQr');
+    expect(DriveLink.isValid(url), isTrue);
+    expect(DriveLink.isValid('not a link'), isFalse);
   });
 }

@@ -29,7 +29,8 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+/build/*
+!/build/web/
 
 # Symbolication related
 app.*.symbols
@@ -41,3 +42,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Ignore the source .env (kept locally) but DO track the bundled web build
+# below so Vercel can serve it statically via Git integration.
+/.env

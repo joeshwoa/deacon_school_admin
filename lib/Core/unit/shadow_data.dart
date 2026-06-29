@@ -1,6 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:deacon_school_admin/Core/unit/color_data.dart';
-
 class ShadowData {
 
   /*static List<BoxShadow> boxShadow1 = [

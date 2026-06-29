@@ -1,142 +1,180 @@
-import 'package:deacon_school_admin/Core/unit/app_routes.dart';
-import 'package:deacon_school_admin/Core/unit/color_data.dart';
-import 'package:deacon_school_admin/Core/unit/style_data.dart';
-import 'package:deacon_school_admin/Features/Auth/presentation/cubit/auth_cubit.dart';
-import 'package:deacon_school_admin/generated/assets.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
-class LoginScreen extends StatelessWidget {
-  LoginScreen({super.key});
+import '../../../../../Core/translations/locale_keys.g.dart';
+import '../../../../../Core/unit/app_routes.dart';
+import '../../../../../Core/widget/app_dialogs.dart';
+import '../../../../../generated/assets.dart';
+import '../../cubit/auth_cubit.dart';
 
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    final ok = await context.read<AuthCubit>().login(
+          email: _email.text.trim(),
+          password: _password.text,
+        );
+    if (!mounted) return;
+    if (ok) {
+      context.go(AppRouter.kHome);
+    }
+  }
+
+  Future<void> _forgot() async {
+    if (_email.text.trim().isEmpty) {
+      AppDialogs.snack(context, LocaleKeys.invalidEmail.tr(), error: true);
+      return;
+    }
+    final ok = await context.read<AuthCubit>().sendReset(_email.text.trim());
+    if (!mounted) return;
+    AppDialogs.snack(
+      context,
+      ok ? LocaleKeys.resetLinkSent.tr() : LocaleKeys.somethingWentWrong.tr(),
+      error: !ok,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthCubit, AuthState>(
-      builder: (context, state) {
-        return Scaffold(
-          backgroundColor: Colors.white,
-          body: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Form(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: BlocBuilder<AuthCubit, AuthState>(
+                builder: (context, state) {
+                  final loading = state.status == AuthStatus.loading;
+                  return Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Container(
-                          height: MediaQuery.sizeOf(context).width * 0.9,
-                          width: MediaQuery.sizeOf(context).width * 0.9,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(23),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(28),
+                          child: Image.asset(
+                            Assets.imageIcLauncherForeground,
+                            height: 140,
+                            color: scheme.primary,
                           ),
-                          clipBehavior: Clip.antiAlias,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
-                            child: Image(
-                              image:
-                                  AssetImage(Assets.imageIcLauncherForeground),
-                              fit: BoxFit.cover,
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          LocaleKeys.adminLoginTitle.tr(),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          LocaleKeys.adminLoginSubtitle.tr(),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 28),
+                        TextFormField(
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: LocaleKeys.email.tr(),
+                            prefixIcon: const Icon(Icons.email_rounded),
+                          ),
+                          validator: (v) {
+                            final value = v?.trim() ?? '';
+                            if (value.isEmpty || !value.contains('@')) {
+                              return LocaleKeys.invalidEmail.tr();
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _password,
+                          obscureText: !state.showPassword,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _submit(),
+                          decoration: InputDecoration(
+                            labelText: LocaleKeys.password.tr(),
+                            prefixIcon: const Icon(Icons.lock_rounded),
+                            suffixIcon: IconButton(
+                              icon: Icon(state.showPassword
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded),
+                              onPressed:
+                                  context.read<AuthCubit>().togglePassword,
                             ),
                           ),
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? LocaleKeys.pleaseFillField.tr()
+                              : null,
+                        ),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton(
+                            onPressed: loading ? null : _forgot,
+                            child: Text(LocaleKeys.forgotPassword.tr()),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (state.status == AuthStatus.error &&
+                            state.errorKey != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              state.errorKey!.tr(),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: scheme.error),
+                            ),
+                          ),
+                        FilledButton(
+                          onPressed: loading ? null : _submit,
+                          child: loading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2.6),
+                                )
+                              : Text(LocaleKeys.login.tr()),
                         ),
                       ],
                     ),
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        'تسجيل دخول للمسئولين',
-                        style: StyleData.textStyleBlackTextColorB40,
-                      ),
-                    ),
-                    Gap(20),
-                    TextFormField(
-                      controller: phoneController,
-                      style: StyleData.textStylePrimaryTextColorSB16,
-                      decoration: InputDecoration(
-                        labelText: 'رقم الهاتف',
-                        labelStyle: StyleData.textStylePrimary60TextColorSB16,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              BorderSide(color: ColorData.primaryLightColor),
-                        ),
-                        disabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              BorderSide(color: ColorData.primary60Color),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: ColorData.primaryColor),
-                        ),
-                      ),
-                    ),
-                    Gap(20),
-                    TextFormField(
-                      controller: passwordController,
-                      obscureText: !context.read<AuthCubit>().showPassword,
-                      style: StyleData.textStylePrimaryTextColorSB16,
-                      decoration: InputDecoration(
-                          labelText: 'رقم السري',
-                          labelStyle: StyleData.textStylePrimary60TextColorSB16,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                BorderSide(color: ColorData.primaryLightColor),
-                          ),
-                          disabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                BorderSide(color: ColorData.primary60Color),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                BorderSide(color: ColorData.primaryColor),
-                          ),
-                          suffixIcon: IconButton(
-                              onPressed: context.read<AuthCubit>().togglePassword,
-                              icon: Icon(
-                                !context.read<AuthCubit>().showPassword
-                                    ? Icons.visibility_rounded
-                                    : Icons.visibility_off_rounded,
-                              ))),
-                    ),
-                    Gap(20),
-                    GestureDetector(
-                      onTap: () {
-                        bool login = true;
-                        if (login) {
-                          context.go(AppRouter.kAppLayoutView);
-                        }
-                      },
-                      child: Container(
-                        height: 56,
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: ColorData.primaryColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text('تسجيل دخول',
-                              style: StyleData.textStyleWhiteTextColorM18),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

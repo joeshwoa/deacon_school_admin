@@ -1,76 +1,84 @@
-import 'package:deacon_school_admin/Core/cubit/layout_cubit.dart';
-import 'package:deacon_school_admin/Features/Auth/presentation/cubit/auth_cubit.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:deacon_school_admin/Core/services/custom_bloc_observer.dart';
-import 'package:deacon_school_admin/Core/services/shared_pref_services.dart';
-import 'package:deacon_school_admin/Core/translations/codegen_loader.g.dart';
-import 'package:deacon_school_admin/Core/unit/app_routes.dart';
-import 'package:deacon_school_admin/Core/unit/border_data.dart';
-import 'package:deacon_school_admin/Core/unit/color_data.dart';
-import 'package:deacon_school_admin/Core/unit/constant_data.dart';
-import 'package:deacon_school_admin/Core/unit/style_data.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async{
-  WidgetsFlutterBinding.ensureInitialized();
+import 'Core/cubit/layout_cubit.dart';
+import 'Core/services/custom_bloc_observer.dart';
+import 'Core/services/shared_pref_services.dart';
+import 'Core/services/supabase_service.dart';
+import 'Core/theme/app_theme.dart';
+import 'Core/theme/theme_cubit.dart';
+import 'Core/translations/codegen_loader.g.dart';
+import 'Core/unit/app_routes.dart';
+import 'Core/unit/constant_data.dart';
+import 'Features/Auth/presentation/cubit/auth_cubit.dart';
+import 'Features/Grades/presentation/cubit/grades_cubit.dart';
+import 'Features/Lectures/presentation/cubit/lectures_cubit.dart';
+import 'Features/Levels/presentation/cubit/levels_cubit.dart';
+import 'Features/Notifications/presentation/cubit/notifications_cubit.dart';
+import 'Features/Students/presentation/cubit/students_cubit.dart';
 
-  //await dotenv.load(fileName: ".env");
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // No .env bundled yet – the app still boots; backend stays disconnected.
+  }
 
   Bloc.observer = CustomBlocObserver();
   await SharedPreferencesServices.init();
+  await SupabaseService.init();
 
-  SystemChrome.setPreferredOrientations(<DeviceOrientation>[
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]).then((_) async {
-    runApp(EasyLocalization(
-        path: 'assets/translations',
-        supportedLocales: const [
-          Locale('en'),
-          Locale('ar'),
+  runApp(
+    EasyLocalization(
+      path: 'assets/translations',
+      supportedLocales: const [Locale('ar'), Locale('en')],
+      fallbackLocale: const Locale('ar'),
+      startLocale: Locale(
+        SharedPreferencesServices.getData(key: ConstantData.kLung) ??
+            ConstantData.kDefaultLung,
+      ),
+      assetLoader: const CodegenLoader(),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => ThemeCubit()),
+          BlocProvider(create: (_) => LayoutCubit()),
+          BlocProvider(create: (_) => AuthCubit()),
+          BlocProvider(create: (_) => LevelsCubit()),
+          BlocProvider(create: (_) => LecturesCubit()),
+          BlocProvider(create: (_) => NotificationsCubit()),
+          BlocProvider(create: (_) => StudentsCubit()),
+          BlocProvider(create: (_) => GradesCubit()),
         ],
-        fallbackLocale: Locale(ConstantData.kDefaultLung),
-        startLocale: Locale(SharedPreferencesServices.getData(key: ConstantData.kLung)??ConstantData.kDefaultLung),
-        assetLoader: const CodegenLoader(),
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider (create: (BuildContext context) => LayoutCubit(),),
-            BlocProvider (create: (BuildContext context) => AuthCubit(),),
-            /*BlocProvider (create: (BuildContext context) => MyBookingCubit(),),*/
-          ],
-          child: const MyApp(),)));
-  });
-
-
+        child: const DeaconSchoolAdminApp(),
+      ),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class DeaconSchoolAdminApp extends StatelessWidget {
+  const DeaconSchoolAdminApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-
-    StyleData.init(context);
-    BorderData.init(context);
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-        statusBarColor: ColorData.primaryColor
-    ));
-
-    return MaterialApp.router(
-      title: 'شماس مدرسة الِشمامسة',
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: context.localizationDelegates,
-      supportedLocales: context.supportedLocales,
-      locale: context.locale,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: ColorData.primaryColor),
-      ),
-      routerConfig: AppRouter.router,
+    return BlocBuilder<ThemeCubit, ThemeMode>(
+      builder: (context, themeMode) {
+        return MaterialApp.router(
+          title: 'Deacon School Admin',
+          debugShowCheckedModeBanner: false,
+          localizationsDelegates: context.localizationDelegates,
+          supportedLocales: context.supportedLocales,
+          locale: context.locale,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeMode,
+          routerConfig: AppRouter.router,
+        );
+      },
     );
   }
 }
-

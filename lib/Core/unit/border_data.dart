@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:deacon_school_admin/Core/unit/color_data.dart';
-import 'package:deacon_school_admin/Core/unit/size_data.dart';
 import 'package:deacon_school_admin/Core/unit/unit.dart';
 
 abstract class BorderData {

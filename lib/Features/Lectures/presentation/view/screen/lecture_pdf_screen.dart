@@ -1,65 +1,80 @@
-import 'package:deacon_school_admin/Core/helper/loading_app_custom.dart';
-import 'package:deacon_school_admin/Core/unit/app_routes.dart';
-import 'package:deacon_school_admin/Core/unit/color_data.dart';
-import 'package:deacon_school_admin/Core/unit/style_data.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cached_pdfview/flutter_cached_pdfview.dart';
-import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
+import 'package:pdfrx/pdfrx.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class LecturePDFScreen extends StatelessWidget {
-  const LecturePDFScreen({super.key});
+import '../../../../../Core/models/lecture.dart';
+import '../../../../../Core/services/drive_link.dart';
+import '../../../../../Core/translations/locale_keys.g.dart';
+import '../../../../../Core/widget/app_dialogs.dart';
+
+class LecturePdfScreen extends StatelessWidget {
+  final Lecture lecture;
+  const LecturePdfScreen({super.key, required this.lecture});
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: ColorData.whiteColor,
-        appBar: AppBar(
-          backgroundColor: ColorData.whiteColor,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: ColorData.primaryColor),
-            onPressed: () {
-              context.pop();
+    final url = lecture.pdfUrl ?? '';
+    final directUrl = DriveLink.toDirectDownload(url);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(lecture.title),
+        actions: [
+          IconButton(
+            tooltip: LocaleKeys.openInBrowser.tr(),
+            icon: const Icon(Icons.open_in_new_rounded),
+            onPressed: () async {
+              final preview = DriveLink.toPreview(url);
+              final uri = Uri.tryParse(preview);
+              if (uri != null &&
+                  !await launchUrl(uri,
+                      mode: LaunchMode.externalApplication)) {
+                if (context.mounted) {
+                  AppDialogs.snack(context, LocaleKeys.cannotOpenLink.tr(),
+                      error: true);
+                }
+              }
             },
           ),
-          title: Text(
-            'بصالتس',
-            textDirection: TextDirection.rtl,
-            style: StyleData.textStyleBlackTextColorSB22,
-          ),
-          centerTitle: true,
-
-
-        ),
-        body: PDF(
-          enableSwipe: true,
-          swipeHorizontal: false,
-          autoSpacing: false,
-          pageFling: false,
-          onError: (error) {
-            print(error.toString());
-          },
-          onPageError: (page, error) {
-            print('$page: ${error.toString()}');
-          },
-          onPageChanged: (page, total) {
-            print('page change: $page/$total');
-          },
-        ).cachedFromUrl(
-          'https://gbihr.org/images/docs/test.pdf',
-          placeholder: (progress) => Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Center(child: LoadingAppCustom()),
-              Gap(10),
-              Center(child: Text('$progress %', style: StyleData.textStyleBlackTextColorB24,)),
-            ],
-          ),
-          errorWidget: (error) => Center(child: Icon(Icons.broken_image_rounded, size: 65, color: ColorData.dangerColor,)),
-        ),
+        ],
       ),
+      body: url.isEmpty
+          ? Center(child: Text(LocaleKeys.mediaNotAvailable.tr()))
+          : PdfViewer.uri(
+              Uri.parse(directUrl),
+              params: PdfViewerParams(
+                loadingBannerBuilder: (context, bytes, total) =>
+                    const Center(child: CircularProgressIndicator()),
+                errorBannerBuilder: (context, error, stack, docRef) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, size: 56),
+                        const SizedBox(height: 12),
+                        Text(LocaleKeys.somethingWentWrong.tr(),
+                            textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final uri =
+                                Uri.tryParse(DriveLink.toPreview(url));
+                            if (uri != null) {
+                              await launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          icon: const Icon(Icons.open_in_new_rounded),
+                          label: Text(LocaleKeys.openInBrowser.tr()),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

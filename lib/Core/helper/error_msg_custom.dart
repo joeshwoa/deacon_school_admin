@@ -6,7 +6,7 @@ import 'package:deacon_school_admin/Core/unit/unit.dart';
 
 class ErrorMsgCustom extends StatelessWidget {
   final String msg;
-  const ErrorMsgCustom({Key? key,required this.msg}) : super(key: key);
+  const ErrorMsgCustom({super.key, required this.msg});
 
   @override
   Widget build(BuildContext context) {

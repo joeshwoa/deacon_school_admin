@@ -1,4 +1,3 @@
-import 'package:deacon_school_admin/Core/unit/size_data.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:deacon_school_admin/Core/unit/color_data.dart';

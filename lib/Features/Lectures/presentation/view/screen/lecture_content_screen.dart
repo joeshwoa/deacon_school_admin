@@ -1,155 +1,118 @@
-import 'package:deacon_school_admin/Core/unit/app_routes.dart';
-import 'package:deacon_school_admin/Core/unit/color_data.dart';
-import 'package:deacon_school_admin/Core/unit/style_data.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../Core/models/lecture.dart';
+import '../../../../../Core/translations/locale_keys.g.dart';
+import '../../../../../Core/unit/app_routes.dart';
+
 class LectureContentScreen extends StatelessWidget {
-  const LectureContentScreen({super.key});
+  final Lecture lecture;
+  const LectureContentScreen({super.key, required this.lecture});
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: ColorData.whiteColor,
-        appBar: AppBar(
-          backgroundColor: ColorData.whiteColor,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: ColorData.primaryColor),
-            onPressed: () {
-              context.pop();
-            },
-          ),
-          title: Text(
-            'بصالتس',
-            textDirection: TextDirection.rtl,
-            style: StyleData.textStyleBlackTextColorSB22,
-          ),
-          centerTitle: true,
-          actions: [
-            Padding(
-              padding: const EdgeInsets.all(6),
-              child: GestureDetector(
-                onTap: () {
-                  // TODO: download audio and pdf
-                },
-                child: Container(
-                  height: 44,
-                  width: 44,
-                  decoration: BoxDecoration(
-                      color: ColorData.secondaryBackgroundColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: ColorData.primaryBorderColor,
-                          width: 1
-                      )
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Icon(
-                    Icons.mode_edit_rounded,
-                    size: 22,
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(title: Text(lecture.title)),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Container(
+                      color: scheme.primary.withValues(alpha: 0.10),
+                      child: (lecture.coverUrl != null &&
+                              lecture.coverUrl!.isNotEmpty)
+                          ? Image.network(lecture.coverUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                  Icons.library_music_rounded,
+                                  size: 64,
+                                  color: scheme.primary))
+                          : Icon(Icons.library_music_rounded,
+                              size: 64, color: scheme.primary),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 18),
+                Text(lecture.title,
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+                if (lecture.description != null &&
+                    lecture.description!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(lecture.description!,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          )),
+                ],
+                const SizedBox(height: 24),
+                _ActionCard(
+                  icon: Icons.menu_book_rounded,
+                  title: LocaleKeys.lectureText.tr(),
+                  enabled: lecture.hasPdf,
+                  onTap: () =>
+                      context.push(AppRouter.kLecturePdf, extra: lecture),
+                ),
+                const SizedBox(height: 12),
+                _ActionCard(
+                  icon: Icons.headphones_rounded,
+                  title: LocaleKeys.lectureAudio.tr(),
+                  enabled: lecture.hasAudio,
+                  onTap: () => context.push(AppRouter.kAudio, extra: lecture),
+                ),
+              ],
             ),
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'يقال في الفترة كذا من السنة ......',
-                textDirection: TextDirection.rtl,
-                style: StyleData.textStyleBlackTextColorSB22,
-                textAlign: TextAlign.right,
-                maxLines: 10,
-              ),
-              Spacer(),
-              GestureDetector(
-                onTap: () {
-                  context.push(AppRouter.kLecturePDFScreenView);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                      color: ColorData.secondaryBackgroundColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: ColorData.primaryBorderColor,
-                          width: 1
-                      )
-                  ),
-                  padding: EdgeInsets.all(12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        height: 70,
-                        width: 70,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          color: ColorData.primaryColor
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Icon(Icons.picture_as_pdf_rounded, size: 30, color: ColorData.whiteColor,),
-                      ),
-                      const Gap(10),
-                      Text(
-                        'نص اللحن',
-                        textDirection: TextDirection.rtl,
-                        style: StyleData.textStyleBlackTextColorSB16,
-                      ),
-                      Spacer(),
-                    ],
-                  ),
-                ),
-              ),
-              const Gap(8),
-              GestureDetector(
-                onTap: () {
-                  context.push(AppRouter.kAudioPlayerScreenView);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                      color: ColorData.secondaryBackgroundColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: ColorData.primaryBorderColor,
-                          width: 1
-                      )
-                  ),
-                  padding: EdgeInsets.all(12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        height: 70,
-                        width: 70,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: ColorData.primaryColor
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Icon(Icons.audio_file_rounded, size: 30, color: ColorData.whiteColor,),
-                      ),
-                      const Gap(10),
-                      Text(
-                        'اللحن مسموع',
-                        textDirection: TextDirection.rtl,
-                        style: StyleData.textStyleBlackTextColorSB16,
-                      ),
-                      Spacer(),
-                    ],
-                  ),
-                ),
-              ),
-              const Gap(20),
-            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool enabled;
+  final VoidCallback onTap;
+  const _ActionCard({
+    required this.icon,
+    required this.title,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: Card(
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: CircleAvatar(
+            radius: 26,
+            backgroundColor: scheme.primary.withValues(alpha: 0.12),
+            child: Icon(icon, color: scheme.primary),
+          ),
+          title: Text(title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, fontSize: 17)),
+          trailing: enabled
+              ? const Icon(Icons.arrow_forward_ios_rounded, size: 16)
+              : Text(LocaleKeys.mediaNotAvailable.tr(),
+                  style: Theme.of(context).textTheme.bodySmall),
+          onTap: enabled ? onTap : null,
         ),
       ),
     );

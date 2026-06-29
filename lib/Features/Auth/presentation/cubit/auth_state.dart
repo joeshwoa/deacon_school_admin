@@ -1,10 +1,27 @@
 part of 'auth_cubit.dart';
 
-@immutable
-sealed class AuthState {}
+enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
 
-final class AuthInitial extends AuthState {}
+class AuthState {
+  final AuthStatus status;
+  final bool showPassword;
+  final String? errorKey;
 
-final class TogglePasswordState extends AuthState {}
+  const AuthState({
+    this.status = AuthStatus.initial,
+    this.showPassword = false,
+    this.errorKey,
+  });
 
-final class AnyState extends AuthState {}
+  AuthState copyWith({
+    AuthStatus? status,
+    bool? showPassword,
+    String? errorKey,
+  }) {
+    return AuthState(
+      status: status ?? this.status,
+      showPassword: showPassword ?? this.showPassword,
+      errorKey: errorKey,
+    );
+  }
+}

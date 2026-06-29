@@ -31,39 +31,25 @@ dependencies:
   flutter:
     sdk: flutter
 
-
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  http:
-  flutter_bloc:
-  #flutter_svg:
-  fluttertoast:
-  go_router:
-  shared_preferences:
-  cached_network_image:
-  image_picker:
-  url_launcher:
+  flutter_bloc: ^9.1.1
+  fluttertoast: ^8.2.8
+  go_router: ^16.1.0
+  shared_preferences: ^2.3.3
+  cached_network_image: ^3.4.1
+  url_launcher: ^6.3.1
   easy_localization: ^3.0.7
-  #share:
-  #flutter_launcher_icons: ^0.13.1
   icons_launcher: ^3.0.0
-  #intl_phone_field: ^3.2.0
-  #lottie: ^3.1.2
-  #easy_rich_text: ^2.1.0
   flutter_dotenv: ^5.2.1
-  #mobkit_dashed_border: ^0.0.6
-  #timeago: ^3.7.0
   supabase_flutter: ^2.8.0
-  loading_animation_widget:
+  loading_animation_widget: ^1.3.0
   gap: ^3.0.1
   audioplayers: ^6.1.0
-  just_audio: ^0.9.42
-  flutter_cached_pdfview: ^0.4.3
-  syncfusion_flutter_gauges: ^27.1.58
+  syncfusion_flutter_gauges: ^28.1.39
   flutter_animate: ^4.5.0
-  flutter_pdfview: ^1.3.4
-  file_picker: ^8.3.3
+  pdfrx: ">=2.1.16 <2.3.0"
 
 
 dev_dependencies:
@@ -108,15 +94,10 @@ flutter:
   uses-material-design: true
 
   assets:
-    #- .env
+    - .env
     - assets/
     - assets/image/
-    #- assets/translations/
     - assets/font/
-    - assets/lottie/
-    #- assets/image/user/
-    #- assets/image/bookTaxi/
-    #- assets/image/myBooking/
 
 
   fonts:

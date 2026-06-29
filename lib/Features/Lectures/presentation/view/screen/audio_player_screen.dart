@@ -1,254 +1,208 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
-//import 'package:just_audio/just_audio.dart';
-import 'package:deacon_school_admin/Core/helper/loading_app_custom.dart';
-import 'package:deacon_school_admin/Core/unit/color_data.dart';
-import 'package:deacon_school_admin/Core/unit/style_data.dart';
-import 'package:deacon_school_admin/generated/assets.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cached_pdfview/flutter_cached_pdfview.dart';
-import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../Core/models/lecture.dart';
+import '../../../../../Core/services/drive_link.dart';
+import '../../../../../Core/translations/locale_keys.g.dart';
+import '../../../../../Core/unit/app_routes.dart';
+
 class AudioPlayerScreen extends StatefulWidget {
-  const AudioPlayerScreen({super.key});
+  final Lecture lecture;
+  const AudioPlayerScreen({super.key, required this.lecture});
 
   @override
   State<AudioPlayerScreen> createState() => _AudioPlayerScreenState();
 }
 
 class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
+  final AudioPlayer _player = AudioPlayer();
+  final List<StreamSubscription> _subs = [];
 
-  final audioPlayer = AudioPlayer();
-  bool isPlaying = false;
-  bool loadingAudio = false;
-  Duration duration = Duration.zero;
-  Duration position = Duration.zero;
-  bool showPositionTime = true;
-  bool showPhoto = true;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  bool _playing = false;
+  bool _looping = false;
+  bool _error = false;
 
   @override
   void initState() {
     super.initState();
-
-    setUpAudio();
+    _init();
   }
 
-  Future setUpAudio () async {
-    setState(() {
-      loadingAudio = true;
-    });
-
-    await audioPlayer.setReleaseMode(ReleaseMode.loop);
-    await audioPlayer.setSource(UrlSource('https://dl.espressif.com/dl/audio/ff-16b-2c-44100hz.mp3'));
-    duration = (await audioPlayer.getDuration())??Duration.zero;
-
-    audioPlayer.onPlayerStateChanged.listen((state) {
-      setState(() {
-        isPlaying = state == PlayerState.playing;
-      });
-    },);
-
-    audioPlayer.onDurationChanged.listen((newDuration) {
-      setState(() {
-        duration = newDuration;
-      });
-    },);
-
-    audioPlayer.onPositionChanged.listen((newPosition) {
-      setState(() {
-        position = newPosition;
-      });
-    },);
-
-    setState(() {
-      loadingAudio = false;
-    });
+  Future<void> _init() async {
+    _subs.add(_player.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _duration = d);
+    }));
+    _subs.add(_player.onPositionChanged.listen((p) {
+      if (mounted) setState(() => _position = p);
+    }));
+    _subs.add(_player.onPlayerStateChanged.listen((s) {
+      if (mounted) setState(() => _playing = s == PlayerState.playing);
+    }));
+    try {
+      final url = DriveLink.toDirectDownload(widget.lecture.audioUrl ?? '');
+      await _player.setSourceUrl(url);
+    } catch (_) {
+      if (mounted) setState(() => _error = true);
+    }
   }
 
   @override
-  Future<void> dispose() async {
-    audioPlayer.onPlayerStateChanged.listen((state) {},).cancel();
-    audioPlayer.onDurationChanged.listen((newDuration) {},).cancel();
-    audioPlayer.onPositionChanged.listen((newPosition) {},).cancel();
-
-    await audioPlayer.pause();
-    await audioPlayer.stop();
-    setUpAudio().ignore();
-    await audioPlayer.dispose();
+  void dispose() {
+    for (final s in _subs) {
+      s.cancel();
+    }
+    _player.dispose();
     super.dispose();
   }
 
-  String formatTime(Duration time) {
-    int hours = time.inHours;
-    int minutes = time.inMinutes;
-    int seconds = time.inSeconds.remainder(60);
-    return "${hours > 0 ? '${minutes.toString().padLeft(2, '0')}:' : ''}${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+  Future<void> _toggle() async {
+    if (_playing) {
+      await _player.pause();
+    } else {
+      await _player.resume();
+    }
+  }
+
+  Future<void> _toggleLoop() async {
+    _looping = !_looping;
+    await _player.setReleaseMode(_looping ? ReleaseMode.loop : ReleaseMode.stop);
+    setState(() {});
+  }
+
+  String _fmt(Duration d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final m = two(d.inMinutes.remainder(60));
+    final s = two(d.inSeconds.remainder(60));
+    return d.inHours > 0 ? '${two(d.inHours)}:$m:$s' : '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: ColorData.whiteColor,
-        appBar: AppBar(
-          backgroundColor: ColorData.whiteColor,
-          title: Text(
-            'بصالتس',
-            textDirection: TextDirection.rtl,
-            style: StyleData.textStyleBlackTextColorSB22,
-          ),
-          centerTitle: true,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: ColorData.primaryColor),
-            onPressed: () {
-              context.pop();
-            },
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.all(6),
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    showPhoto = !showPhoto;
-                  });
-                },
-                child: Container(
-                  height: 44,
-                  width: 44,
-                  decoration: BoxDecoration(
-                      color: ColorData.secondaryBackgroundColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: ColorData.primaryBorderColor,
-                          width: 1
-                      )
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Icon(
-                    Icons.swap_horiz_rounded,
-                    size: 22,
-                  ),
-                ),
-              ),
+    final scheme = Theme.of(context).colorScheme;
+    final lecture = widget.lecture;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(lecture.title),
+        actions: [
+          if (lecture.hasPdf)
+            IconButton(
+              tooltip: LocaleKeys.lectureText.tr(),
+              icon: const Icon(Icons.menu_book_rounded),
+              onPressed: () =>
+                  context.push(AppRouter.kLecturePdf, extra: lecture),
             ),
-          ],
-        ),
-        body: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              showPhoto ? ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.asset(
-                  Assets.imageChurchMelodyIcon,
-                  width: double.infinity,
-                  height: 350,
-                  fit: BoxFit.cover,
-                ),
-              ) : Expanded(
-                child: PDF(
-                  enableSwipe: true,
-                  swipeHorizontal: false,
-                  autoSpacing: false,
-                  pageFling: false,
-                  onError: (error) {
-                    print(error.toString());
-                  },
-                  onPageError: (page, error) {
-                    print('$page: ${error.toString()}');
-                  },
-                  onPageChanged: (page, total) {
-                    print('page change: $page/$total');
-                  },
-                ).cachedFromUrl(
-                  'https://gbihr.org/images/docs/test.pdf',
-                  placeholder: (progress) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Center(child: LoadingAppCustom()),
-                      Gap(10),
-                      Center(child: Text('$progress %', style: StyleData.textStyleBlackTextColorB24,)),
-                    ],
-                  ),
-                  errorWidget: (error) => Center(child: Icon(Icons.broken_image_rounded, size: 65, color: ColorData.dangerColor,)),
-                ),
-              ),
-              const Gap(32),
-              Text(
-                'بصالتس',
-                textDirection: TextDirection.rtl,
-                style: StyleData.textStyleBlackTextColorB24,
-              ),
-              const Gap(4),
-              Text(
-                'يقال في الفترة كذا من السنة ......',
-                textDirection: TextDirection.rtl,
-                style: StyleData.textStyleBlackTextColorSB22,
-                maxLines: 1,
-              ),
-              Slider(
-                min: 0,
-                max: duration.inSeconds.toDouble(),
-                value: position.inSeconds.toDouble(),
-                onChanged: (value) async {
-                  final position = Duration(seconds: value.toInt());
-                  await audioPlayer.seek(position);
-
-                  await audioPlayer.resume();
-                },
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          showPositionTime = !showPositionTime;
-                        });
-                      },
-                      child: Text(
-                        showPositionTime ? formatTime(position) : formatTime(duration-position),
-                        style: StyleData.textStyleBlackTextColorSB22,
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(28),
+                            color: scheme.primary.withValues(alpha: 0.12),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: (lecture.coverUrl != null &&
+                                  lecture.coverUrl!.isNotEmpty)
+                              ? Image.network(lecture.coverUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Icon(
+                                      Icons.music_note_rounded,
+                                      size: 96,
+                                      color: scheme.primary))
+                              : Icon(Icons.music_note_rounded,
+                                  size: 96, color: scheme.primary),
+                        ),
                       ),
                     ),
-                    Text(
-                      formatTime(duration),
-                      style: StyleData.textStyleBlackTextColorSB22,
-                    ),
-                  ],
-                ),
-              ),
-              const Gap(8),
-              loadingAudio ? LoadingAppCustom(size: 35,) : CircleAvatar(
-                radius: 35,
-                child: IconButton(
-                  icon: Icon(
-                      isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                      color: ColorData.primaryLightColor
                   ),
-                  iconSize: 50,
-
-                  onPressed: () async {
-                    if (isPlaying) {
-                      setState(() {
-                        isPlaying =false;
-                      });
-                      await audioPlayer.pause();
-                    } else {
-                      setState(() {
-                        isPlaying =true;
-                      });
-                      await audioPlayer.resume();
-                    }
-                  },
-                ),
-              )
-            ],
+                  const SizedBox(height: 20),
+                  Text(lecture.title,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 16),
+                  if (_error)
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(LocaleKeys.mediaNotAvailable.tr(),
+                          style: TextStyle(color: scheme.error)),
+                    ),
+                  Slider(
+                    value: _position.inMilliseconds
+                        .clamp(0, _duration.inMilliseconds)
+                        .toDouble(),
+                    max: (_duration.inMilliseconds == 0
+                            ? 1
+                            : _duration.inMilliseconds)
+                        .toDouble(),
+                    onChanged: (v) =>
+                        _player.seek(Duration(milliseconds: v.toInt())),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_fmt(_position)),
+                        Text(_fmt(_duration)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        iconSize: 30,
+                        color: _looping ? scheme.primary : null,
+                        icon: const Icon(Icons.repeat_rounded),
+                        onPressed: _toggleLoop,
+                      ),
+                      const SizedBox(width: 12),
+                      FloatingActionButton.large(
+                        onPressed: _error ? null : _toggle,
+                        child: Icon(
+                          _playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 42,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        iconSize: 30,
+                        icon: const Icon(Icons.stop_rounded),
+                        onPressed: () async {
+                          await _player.stop();
+                          if (mounted) {
+                            setState(() => _position = Duration.zero);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
